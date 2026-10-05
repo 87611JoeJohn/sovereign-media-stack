@@ -2,6 +2,8 @@
 
 **👉 New to this? Start with [WALKTHROUGH.md](WALKTHROUGH.md): a click-by-click guide anyone can follow.**
 
+**🤖 Want a helper?** Open this folder with [Claude Code](https://claude.com/claude-code) and say "help me set this up". The included `CLAUDE.md` turns Claude into a setup guide for this exact stack. It never asks for your passwords or keys.
+
 Your own streaming service at home: watch on every TV and phone, let the family request things, and keep your library organized. Everything runs on your own computer or NAS with Docker. No subscription.
 
 | App | What it does | Address |

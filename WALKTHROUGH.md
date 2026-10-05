@@ -439,6 +439,44 @@ Always go to the kit folder first: `cd ~/sovereign-media-stack`
 
 ---
 
+## 🤖 Get help from Claude (your AI helper)
+
+Stuck? Ask **Claude**, an AI assistant. It's like having a patient helper sitting next to you.
+
+### Option 1: Claude Code (the helper can see your computer) 🧑‍🧒
+If you have Claude Code installed, open the Terminal in the kit folder and type:
+
+```
+cd ~/sovereign-media-stack
+claude
+```
+
+Then say: **"Help me set this up. I'm on Part ___."**
+This kit has a special file (`CLAUDE.md`) that teaches Claude exactly how this setup works. It can run safe checks for you, read error messages, and explain them. It will **always ask before changing anything**.
+
+### Option 2: Claude in your browser or phone app
+Go to <https://claude.ai>, start a new chat, and paste this (fill in the blanks):
+
+```
+I'm setting up "sovereign-media-stack" (a Jellyfin home media server with Docker)
+by following this guide: https://github.com/87611JoeJohn/sovereign-media-stack/blob/main/WALKTHROUGH.md
+I'm a beginner. I'm on Path ___ (A = Ubuntu computer, B = Synology NAS), Part ___, Step ___.
+Here's what I typed:
+___
+Here's what I see (the error or what happened):
+___
+Please explain what's wrong in simple words and tell me the next step, one at a time.
+```
+
+📸 You can also add a **screenshot** of your screen.
+
+### 🔒 Stay safe when asking for help
+- **Never paste your `.env` file, your VPN key, or any password** into a chat, even with Claude.
+- In screenshots, **cover up** keys and passwords first.
+- If you pasted a secret by accident, change it (make a new VPN key, Part 5).
+
+---
+
 ## 🆘 Help! Something went wrong
 
 | What you see | What to do |
@@ -453,7 +491,7 @@ Always go to the kit folder first: `cd ~/sovereign-media-stack`
 | An app says it **can't write** or has a **permission error** | Path A: `sudo chown -R 1000:1000 /your/config/folder /your/data/folder` (use **your** PUID:PGID numbers) |
 | Jellyfin shows no posters | Use folder names like `Movie Name (2010)`, then **Scan All Libraries** |
 | Radarr's **Test** is red | The host must be `gluetun` (not an IP), port `8080`, with your qBittorrent password |
-| Totally stuck | Type `docker compose ps` and look for any app that isn't **running**, then `docker logs <that-app>` and read the last lines. Searching that error online usually finds the fix. |
+| Totally stuck | Type `docker compose ps` and look for any app that isn't **running**, then `docker logs <that-app>` and read the last lines. Searching that error online, or asking Claude (see above), usually finds the fix. |
 
 ---
 
