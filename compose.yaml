@@ -1,0 +1,127 @@
+# Home media server: Jellyfin + requests + library automation + VPN-protected downloads.
+# Everything personal lives in .env (copy .env.example to .env and fill it in). Never share your .env.
+# Start:  ./setup.sh     (or: docker compose up -d)
+# Optional remote access through a Cloudflare tunnel:  docker compose --profile remote up -d
+
+x-common: &common
+  environment: &env
+    PUID: ${PUID}
+    PGID: ${PGID}
+    TZ: ${TZ}
+  restart: unless-stopped
+
+services:
+  ### Watch: your own streaming service ###
+  jellyfin:
+    <<: *common
+    image: lscr.io/linuxserver/jellyfin:${JELLYFIN_VERSION}   # pinned on purpose: upgrade by changing JELLYFIN_VERSION, not automatically
+    container_name: jellyfin
+    labels:
+      - com.centurylinklabs.watchtower.enable=false           # Watchtower never auto-updates Jellyfin (a major update once crash-looped)
+    volumes:
+      - ${CONFIG_DIR}/jellyfin:/config
+      - ${DATA_DIR}/media:/data/media
+    ports:
+      - 8096:8096
+      - 7359:7359/udp   # lets apps find the server on your network
+    # Hardware video transcoding (Intel/AMD): uncomment if your machine has /dev/dri
+    # devices:
+    #   - /dev/dri:/dev/dri
+
+  ### Ask: family members request movies and shows ###
+  jellyseerr:
+    image: fallenbagel/jellyseerr:latest
+    container_name: jellyseerr
+    environment:
+      TZ: ${TZ}
+    volumes:
+      - ${CONFIG_DIR}/jellyseerr:/app/config
+    ports:
+      - 5055:5055
+    restart: unless-stopped
+
+  ### Organize: keeps your TV and movie libraries tidy and complete ###
+  sonarr:
+    <<: *common
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    volumes:
+      - ${CONFIG_DIR}/sonarr:/config
+      - ${DATA_DIR}:/data          # one shared /data folder = instant moves (hardlinks) instead of copies
+    ports:
+      - 8989:8989
+
+  radarr:
+    <<: *common
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    volumes:
+      - ${CONFIG_DIR}/radarr:/config
+      - ${DATA_DIR}:/data
+    ports:
+      - 7878:7878
+
+  prowlarr:
+    <<: *common
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    volumes:
+      - ${CONFIG_DIR}/prowlarr:/config
+    ports:
+      - 9696:9696
+
+  ### Download: client that only ever talks through your VPN ###
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    cap_add: [NET_ADMIN]
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      VPN_SERVICE_PROVIDER: ${VPN_SERVICE_PROVIDER}
+      VPN_TYPE: ${VPN_TYPE}
+      WIREGUARD_PRIVATE_KEY: ${WIREGUARD_PRIVATE_KEY}
+      WIREGUARD_ADDRESSES: ${WIREGUARD_ADDRESSES:-}
+      OPENVPN_USER: ${OPENVPN_USER}
+      OPENVPN_PASSWORD: ${OPENVPN_PASSWORD}
+      SERVER_COUNTRIES: ${VPN_SERVER_COUNTRIES}
+      TZ: ${TZ}
+    volumes:
+      - ${CONFIG_DIR}/gluetun:/gluetun
+    ports:
+      - 8080:8080         # qBittorrent web page (your home network only)
+      # No 6881 ports here on purpose: downloads come in through the VPN tunnel, not your router.
+    restart: unless-stopped
+
+  qbittorrent:
+    <<: *common
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    environment:
+      <<: *env
+      WEBUI_PORT: 8080
+      TORRENTING_PORT: 6881
+    volumes:
+      - ${CONFIG_DIR}/qbittorrent:/config
+      - ${DATA_DIR}:/data
+    network_mode: "service:gluetun"   # no VPN = no internet for the download client (a built-in kill switch)
+    depends_on: [gluetun]
+
+  ### Keep it updated (weekly) ###
+  watchtower:
+    image: nickfedor/watchtower:latest
+    container_name: watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --cleanup --interval 604800
+    restart: unless-stopped
+
+  ### Optional: reach Jellyfin / Jellyseerr from outside without opening ports ###
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    profiles: ["remote"]
+    command: tunnel run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    restart: unless-stopped
